@@ -1,0 +1,5 @@
+{
+  "name": "StyleFusion",
+  "description": "A multimodal visual analysis tool that blends styles from multiple images to generate structured JSON metadata and evocative natural language descriptions.",
+  "requestFramePermissions": []
+}
