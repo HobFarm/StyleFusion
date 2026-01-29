@@ -47,13 +47,10 @@ const App: React.FC = () => {
     connectionError,
     textModels,
     imageModels,
-    isLoadingModels,
-    modelsError,
     setApiKey,
     setTextModelId,
     setImageModelId,
     testConnection,
-    fetchModels,
     clearConfig,
     validateApiKey,
   } = useGeminiClient();
@@ -118,7 +115,7 @@ const App: React.FC = () => {
 
       setStatus({ isProcessing: true, step: 'analyzing', error: null });
 
-      const { json, description } = await analyzeImages(
+      const { json, description, mjPrompt } = await analyzeImages(
         files, labels, guidance, controller.signal,
         (info) => {
           if (info.attempt && info.maxAttempts) {
@@ -134,7 +131,8 @@ const App: React.FC = () => {
 
       setResults({
         jsonResult: json,
-        descriptionResult: description
+        descriptionResult: description,
+        mjCompilerResult: mjPrompt
       });
 
       setStatus({ isProcessing: false, step: 'complete', error: null, retryInfo: undefined });
@@ -225,8 +223,8 @@ const App: React.FC = () => {
     if (!results?.jsonResult) return;
 
     const content = format === 'json'
-      ? formatAllAsJson(results.descriptionResult, results.jsonResult)
-      : formatAllAsText(results.descriptionResult, results.jsonResult);
+      ? formatAllAsJson(results.descriptionResult, results.jsonResult, results.mjCompilerResult)
+      : formatAllAsText(results.descriptionResult, results.jsonResult, results.mjCompilerResult);
 
     const mimeType = format === 'json' ? 'application/json' : 'text/plain';
     const blob = new Blob([content], { type: mimeType });
@@ -497,11 +495,12 @@ const App: React.FC = () => {
                 </div>
               )}
 
-              {/* Prompt Tabs (Description, SD/MJ, Universal) */}
+              {/* Prompt Tabs (MJ Prompt, Description, SD/MJ, Universal) */}
               {results.descriptionResult && results.jsonResult && (
                 <PromptTabs
                   description={results.descriptionResult}
                   data={results.jsonResult}
+                  mjPrompt={results.mjCompilerResult}
                 />
               )}
 
@@ -581,9 +580,6 @@ const App: React.FC = () => {
             validateApiKey={validateApiKey}
             textModels={textModels}
             imageModels={imageModels}
-            isLoadingModels={isLoadingModels}
-            modelsError={modelsError}
-            onFetchModels={fetchModels}
           />
         )}
 
@@ -597,8 +593,6 @@ const App: React.FC = () => {
             imageModelId={imageModelId}
             textModels={textModels}
             imageModels={imageModels}
-            isLoadingModels={isLoadingModels}
-            modelsError={modelsError}
             connectionStatus={connectionStatus}
             connectionError={connectionError}
             isConnecting={isConnecting}
@@ -606,7 +600,6 @@ const App: React.FC = () => {
             onTextModelIdChange={setTextModelId}
             onImageModelIdChange={setImageModelId}
             onTestConnection={testConnection}
-            onFetchModels={fetchModels}
             clearConfig={clearConfig}
           />
         )}

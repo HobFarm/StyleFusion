@@ -176,3 +176,85 @@ Format:
 - Be specific and evocative.
 - Output ONLY the paragraph.
 `;
+
+export const MJ_COMPILER_SYSTEM_PROMPT = `
+You are a Midjourney prompt compiler. You receive structured metadata JSON from an image analysis system. Your job is to translate this into Midjourney's native prompt format.
+
+OUTPUT FORMAT (JSON only):
+{
+  "positive": "subject phrase, in the style of X, modifier, modifier, modifier",
+  "negative": "term, term, term"
+}
+
+POSITIVE PROMPT RULES:
+- Exactly 6-8 comma-separated values, no more
+- Structure: subject, in the style of [style], [modifier], [modifier]...
+- Slot 1 - Subject: Who/what is shown + key attire or distinguishing feature (12-15 words max)
+- Slot 2 - Style: "in the style of" + rendering technique or medium (pull from technical.render or meta.quality)
+- Slots 3-8 - Modifiers: Color palette, primary texture, atmosphere, framing (1-3 words each)
+- Color format: Always "X and Y" or "dark X and light Y" (e.g., "sepia and violet", "dark cyan and amber")
+- Prefer single-word modifiers and MJ-native vocabulary
+- NO artist names, NO IP/brand references, NO fictional character names, NO real person names
+- NO redundancy: if a feature is in the subject, do not repeat it as a modifier
+- NO filler words: remove "beautiful", "elegant", "stunning", "amazing"
+
+NEGATIVE PROMPT RULES:
+- 3-5 terms maximum
+- Single words or two-word phrases only
+- Focus on what would break the intended style
+- Distill from the negative field in the JSON, do not invent
+- Common useful terms: photorealistic, blurry, vibrant, modern, plastic, oversaturated, deformed
+
+MJ-NATIVE VOCABULARY (prefer these):
+- Vibe terms: wizardcore, cottagecore, darkcore, cabincore, naturecore, devilcore, arcane
+- Color pairs: "dark X and light Y", "X and Y"
+- Texture: ink hatching, rough hewn, matte, glossy, fibrous, weathered
+- Lighting: harsh lighting, rim light, chiaroscuro, flat lighting, dramatic shadows
+- Framing: bust portrait, full body, aerial view, high-angle, close up, panoramic
+- Render: etching, lithograph, watercolor, oil painting, digital art, 3d render, photograph
+
+VOCABULARY TRANSLATION:
+- "chiaroscuro lighting" → "dramatic shadows" or "harsh lighting"
+- "vintage aesthetic" → specify decade or use "retro"
+- "elegant silhouette" → specify the actual shape or material
+- "atmospheric perspective" → "depth" or "hazy background"
+- Any verbose phrase → condense to 1-2 word equivalent
+
+Respond ONLY with the JSON object. No explanation, no markdown formatting, no code fences.
+`;
+
+// ============================================================================
+// MODEL CONFIGURATION
+// ============================================================================
+
+export type ModelTier = 'free' | 'paid';
+
+export interface StaticModelInfo {
+  id: string;
+  label: string;
+  tier: ModelTier;
+}
+
+// Default model IDs
+export const DEFAULT_EXTRACTION_MODEL_ID = 'gemini-2.5-flash';
+export const DEFAULT_GENERATION_MODEL_ID = 'gemini-2.5-flash-image';
+
+// Extraction Models (7 total - for image analysis / metadata extraction)
+export const EXTRACTION_MODELS: StaticModelInfo[] = [
+  { id: 'gemini-3-pro-preview', label: 'Gemini 3 Pro (Paid)', tier: 'paid' },
+  { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash', tier: 'free' },
+  { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (Paid)', tier: 'paid' },
+  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', tier: 'free' },
+  { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash-Lite', tier: 'free' },
+  { id: 'gemini-3-pro-image-preview', label: 'Nano Banana Pro (Paid)', tier: 'paid' },
+  { id: 'gemini-2.5-flash-image', label: 'Nano Banana', tier: 'free' },
+];
+
+// Generation Models (5 total - for creating images)
+export const GENERATION_MODELS: StaticModelInfo[] = [
+  { id: 'gemini-3-pro-image-preview', label: 'Nano Banana Pro (Paid)', tier: 'paid' },
+  { id: 'gemini-2.5-flash-image', label: 'Nano Banana', tier: 'free' },
+  { id: 'imagen-4.0-generate-001', label: 'Imagen 4 (Paid)', tier: 'paid' },
+  { id: 'imagen-4.0-ultra-generate-001', label: 'Imagen 4 Ultra (Paid)', tier: 'paid' },
+  { id: 'imagen-4.0-fast-generate-001', label: 'Imagen 4 Fast', tier: 'free' },
+];

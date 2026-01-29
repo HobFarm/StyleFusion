@@ -1,60 +1,47 @@
 import React, { useState, useMemo } from 'react';
-import { ImageMetadata, SDMJIncludeSections, UniversalIncludeSections } from '../types';
-import { generateUniversalPrompt, generateSDMJPrompt, getDefaultExportOptions } from '../utils/promptGenerators';
+import { ImageMetadata, MJCompilerResult } from '../types';
 
 interface PromptTabsProps {
   description: string;
   data: ImageMetadata;
+  mjPrompt: MJCompilerResult | null;
 }
 
-type TabId = 'description' | 'sd-mj' | 'universal';
+type TabId = 'description' | 'mj-compiled';
 
-const TABS: { id: TabId; label: string }[] = [
-  { id: 'description', label: 'Description' },
-  { id: 'sd-mj', label: 'SD / MJ' },
-  { id: 'universal', label: 'Universal' },
-];
+interface TabDef {
+  id: TabId;
+  label: string;
+}
 
-const SDMJ_SECTION_OPTIONS: { key: keyof SDMJIncludeSections; label: string }[] = [
-  { key: 'subject', label: 'Subject' },
-  { key: 'styleAnchor', label: 'Style' },
-  { key: 'colorPalette', label: 'Colors' },
-  { key: 'secondaryStyles', label: 'Secondary' },
-  { key: 'technical', label: 'Technical' },
-  { key: 'negative', label: 'Negative' },
-];
-
-const UNIVERSAL_SECTION_OPTIONS: { key: keyof UniversalIncludeSections; label: string }[] = [
-  { key: 'meta', label: 'Meta' },
-  { key: 'subject', label: 'Subject' },
-  { key: 'scene', label: 'Scene' },
-  { key: 'technical', label: 'Technical' },
-  { key: 'palette', label: 'Palette' },
-  { key: 'details', label: 'Details' },
-  { key: 'textContent', label: 'Text' },
-  { key: 'negative', label: 'Negative' },
-];
-
-const PromptTabs: React.FC<PromptTabsProps> = ({ description, data }) => {
+const PromptTabs: React.FC<PromptTabsProps> = ({ description, data, mjPrompt }) => {
+  // Default to description tab
   const [activeTab, setActiveTab] = useState<TabId>('description');
   const [copied, setCopied] = useState(false);
-  const [sdmjSections, setSdmjSections] = useState<SDMJIncludeSections>(
-    () => getDefaultExportOptions('sd-mj').sdmjSections!
-  );
-  const [universalSections, setUniversalSections] = useState<UniversalIncludeSections>(
-    () => getDefaultExportOptions('universal').universalSections!
-  );
+
+  // Build tabs array - Description first, MJ Prompt second (if available)
+  const tabs: TabDef[] = useMemo(() => {
+    const baseTabs: TabDef[] = [{ id: 'description', label: 'Description' }];
+    if (mjPrompt) {
+      baseTabs.push({ id: 'mj-compiled', label: 'MJ Prompt' });
+    }
+    return baseTabs;
+  }, [mjPrompt]);
 
   const activeContent = useMemo(() => {
     switch (activeTab) {
       case 'description':
         return description;
-      case 'sd-mj':
-        return generateSDMJPrompt(data, { sdmjSections });
-      case 'universal':
-        return generateUniversalPrompt(data, { universalSections });
+      case 'mj-compiled':
+        if (!mjPrompt) return '';
+        // Format: positive prompt, then negative as --no parameter
+        let content = mjPrompt.positive;
+        if (mjPrompt.negative) {
+          content += `\n\n--no ${mjPrompt.negative}`;
+        }
+        return content;
     }
-  }, [activeTab, description, data, sdmjSections, universalSections]);
+  }, [activeTab, description, mjPrompt]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(activeContent);
@@ -75,92 +62,60 @@ const PromptTabs: React.FC<PromptTabsProps> = ({ description, data }) => {
     URL.revokeObjectURL(url);
   };
 
-  const toggleSdmjSection = (key: keyof SDMJIncludeSections) => {
-    setSdmjSections(prev => ({ ...prev, [key]: !prev[key] }));
-  };
-
-  const toggleUniversalSection = (key: keyof UniversalIncludeSections) => {
-    setUniversalSections(prev => ({ ...prev, [key]: !prev[key] }));
-  };
+  // Count segments in MJ prompt for display
+  const mjSegmentCount = useMemo(() => {
+    if (!mjPrompt) return 0;
+    return mjPrompt.positive.split(',').map(s => s.trim()).filter(Boolean).length;
+  }, [mjPrompt]);
 
   return (
     <div className="bg-slate-900 rounded-xl border border-slate-800 shadow-xl shadow-black/20 overflow-hidden">
       {/* Tab Bar */}
       <div className="flex border-b border-slate-800">
-        {TABS.map(tab => (
+        {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-all ${
               activeTab === tab.id
-                ? 'bg-violet-600 text-white'
+                ? tab.id === 'mj-compiled'
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-violet-600 text-white'
                 : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700 hover:text-slate-300'
             }`}
           >
+            {tab.id === 'mj-compiled' && (
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+              </svg>
+            )}
             {tab.id === 'description' && (
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
               </svg>
             )}
-            {tab.id === 'sd-mj' && (
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-              </svg>
-            )}
-            {tab.id === 'universal' && (
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-              </svg>
-            )}
             {tab.label}
+            {tab.id === 'mj-compiled' && mjPrompt && (
+              <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${
+                mjSegmentCount >= 6 && mjSegmentCount <= 8
+                  ? 'bg-emerald-800/50 text-emerald-300'
+                  : 'bg-amber-800/50 text-amber-300'
+              }`}>
+                {mjSegmentCount}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
-      {/* Section Toggles (SD/MJ and Universal only) */}
-      {activeTab !== 'description' && (
-        <div className="p-4 border-b border-slate-800">
-          <label className="text-xs text-slate-400 uppercase tracking-wider mb-2 block">Include Sections</label>
-          <div className="flex flex-wrap gap-2">
-            {activeTab === 'sd-mj' ? (
-              SDMJ_SECTION_OPTIONS.map(opt => (
-                <button
-                  key={opt.key}
-                  onClick={() => toggleSdmjSection(opt.key)}
-                  className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
-                    sdmjSections[opt.key]
-                      ? 'bg-slate-700 text-white'
-                      : 'bg-slate-800/50 text-slate-500 hover:text-slate-400'
-                  }`}
-                >
-                  {sdmjSections[opt.key] && (
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3 inline mr-1">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                  {opt.label}
-                </button>
-              ))
-            ) : (
-              UNIVERSAL_SECTION_OPTIONS.map(opt => (
-                <button
-                  key={opt.key}
-                  onClick={() => toggleUniversalSection(opt.key)}
-                  className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
-                    universalSections[opt.key]
-                      ? 'bg-slate-700 text-white'
-                      : 'bg-slate-800/50 text-slate-500 hover:text-slate-400'
-                  }`}
-                >
-                  {universalSections[opt.key] && (
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3 inline mr-1">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                  {opt.label}
-                </button>
-              ))
-            )}
+      {/* MJ Prompt Info Banner */}
+      {activeTab === 'mj-compiled' && mjPrompt && (
+        <div className="px-4 py-3 bg-emerald-900/20 border-b border-emerald-800/50">
+          <div className="flex items-center gap-2 text-emerald-400 text-xs">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Optimized for Midjourney</span>
           </div>
         </div>
       )}
@@ -175,8 +130,8 @@ const PromptTabs: React.FC<PromptTabsProps> = ({ description, data }) => {
             </p>
           </div>
         ) : (
-          <pre className="bg-slate-950 border border-slate-800 rounded-lg p-4 text-sm text-blue-200 font-mono whitespace-pre-wrap overflow-auto max-h-[40vh]">
-            {activeContent || <span className="text-slate-600 italic">No content (all sections disabled)</span>}
+          <pre className="bg-emerald-950/30 border border-emerald-800/50 rounded-lg p-4 text-sm text-emerald-200 font-mono whitespace-pre-wrap overflow-auto max-h-[40vh]">
+            {activeContent || <span className="text-slate-600 italic">MJ compilation unavailable</span>}
           </pre>
         )}
       </div>
@@ -206,7 +161,9 @@ const PromptTabs: React.FC<PromptTabsProps> = ({ description, data }) => {
               copied
                 ? 'bg-green-600 text-white'
                 : activeContent
-                  ? 'bg-violet-600 hover:bg-violet-500 text-white'
+                  ? activeTab === 'mj-compiled'
+                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                    : 'bg-violet-600 hover:bg-violet-500 text-white'
                   : 'bg-slate-700 text-slate-500 cursor-not-allowed'
             }`}
           >

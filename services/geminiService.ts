@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI, Part, GenerativeModel, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
 import heic2any from "heic2any";
-import { JSON_SYSTEM_PROMPT, DESC_SYSTEM_PROMPT, API_TIMEOUT_MS, IMAGE_PROCESSING_TIMEOUT_MS, RETRY_CONFIG, MAX_FILE_SIZE } from "../constants";
-import { ImageMetadata, ImageLabel, IMAGE_LABEL_OPTIONS, ImageGenerationResult } from "../types";
+import { JSON_SYSTEM_PROMPT, DESC_SYSTEM_PROMPT, MJ_COMPILER_SYSTEM_PROMPT, API_TIMEOUT_MS, IMAGE_PROCESSING_TIMEOUT_MS, RETRY_CONFIG, MAX_FILE_SIZE } from "../constants";
+import { ImageMetadata, ImageLabel, IMAGE_LABEL_OPTIONS, ImageGenerationResult, MJCompilerResult } from "../types";
 import { logger } from "./loggingService";
 import { getValidationIssues, normalizeMetadata } from "../utils/metadataNormalizers";
 
@@ -736,6 +736,105 @@ function buildImageContext(labels: ImageLabel[]): string {
   return contextLines.join('\n') + '\n\n';
 }
 
+/**
+ * Compile metadata into MJ-optimized prompt
+ * This is a separate LLM call that runs AFTER JSON extraction
+ * Graceful failure: returns null on error, doesn't throw
+ */
+export async function compileMJPrompt(
+  metadata: ImageMetadata,
+  abortSignal?: AbortSignal,
+  providedApiKey?: string,
+  textModel?: string
+): Promise<MJCompilerResult | null> {
+  const modelToUse = textModel || FALLBACK_MODEL;
+
+  logger.info('Starting MJ prompt compilation', { textModel: modelToUse });
+
+  const apiKey = providedApiKey?.trim() || getStoredApiKey();
+
+  if (!apiKey) {
+    logger.warn('MJ compiler: API key missing, skipping');
+    return null;
+  }
+
+  checkAborted(abortSignal);
+
+  const genAI = new GoogleGenerativeAI(apiKey);
+
+  // Build input prompt with the extracted metadata
+  const inputPrompt = `Compile this metadata into an MJ prompt:\n\n${JSON.stringify(metadata, null, 2)}`;
+
+  try {
+    const result = await generateWithModel(
+      genAI,
+      modelToUse,
+      MJ_COMPILER_SYSTEM_PROMPT,
+      [{ text: inputPrompt }],
+      { useJsonMode: true },
+      abortSignal,
+      undefined  // No progress callback for this secondary call
+    );
+
+    checkAborted(abortSignal);
+
+    // Parse and validate the result
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(result);
+    } catch {
+      logger.warn('MJ compiler returned invalid JSON', { result: result.substring(0, 200) });
+      return null;
+    }
+
+    // Basic validation
+    const data = parsed as Record<string, unknown>;
+    if (typeof data.positive !== 'string' || !data.positive) {
+      logger.warn('MJ compiler output missing positive prompt');
+      return null;
+    }
+
+    // Validate segment count (6-8)
+    const segments = data.positive.split(',').map((s: string) => s.trim()).filter(Boolean);
+    if (segments.length < 6 || segments.length > 8) {
+      logger.warn('MJ compiler output has incorrect segment count', {
+        expected: '6-8',
+        actual: segments.length
+      });
+      // Still return the result but log the warning
+    }
+
+    // Validate "in the style of" appears in position 2
+    if (segments.length >= 2 && !segments[1].toLowerCase().includes('in the style of')) {
+      logger.warn('MJ compiler output missing "in the style of" in second position');
+      // Still return the result but log the warning
+    }
+
+    const mjResult: MJCompilerResult = {
+      positive: data.positive,
+      negative: typeof data.negative === 'string' ? data.negative : ''
+    };
+
+    logger.info('MJ prompt compilation complete', {
+      positiveLength: mjResult.positive.length,
+      negativeLength: mjResult.negative.length,
+      segmentCount: segments.length
+    });
+
+    return mjResult;
+
+  } catch (error) {
+    // Graceful failure - log and return null, don't block main flow
+    if ((error as Error).name === 'AbortError') {
+      throw error; // Re-throw abort errors
+    }
+    logger.warn('MJ compiler failed, continuing without MJ prompt', {
+      error: (error as Error).message
+    });
+    return null;
+  }
+}
+
 export async function analyzeImages(
   files: File[],
   labels: ImageLabel[] = [],
@@ -744,7 +843,7 @@ export async function analyzeImages(
   onProgress?: AnalysisProgressCallback,
   providedApiKey?: string,
   textModel?: string
-): Promise<{ json: ImageMetadata, description: string }> {
+): Promise<{ json: ImageMetadata, description: string, mjPrompt: MJCompilerResult | null }> {
   const modelToUse = textModel || FALLBACK_MODEL;
 
   logger.info('Starting image analysis', {
@@ -860,15 +959,26 @@ export async function analyzeImages(
 
   const descriptionText = descText || "Description generation failed. Analysis data available above.";
 
+  // Run MJ compilation (graceful failure - won't throw, returns null on error)
+  logger.info('Starting MJ prompt compilation...');
+  const mjPrompt = await compileMJPrompt(
+    parsedJson,
+    abortSignal,
+    providedApiKey,
+    textModel
+  );
+
   logger.info('Analysis complete', {
     hasJson: !!parsedJson,
     hasDescription: !!descText,
+    hasMJPrompt: !!mjPrompt,
     descriptionLength: descriptionText.length
   });
 
   return {
     json: parsedJson,
-    description: descriptionText
+    description: descriptionText,
+    mjPrompt
   };
 }
 

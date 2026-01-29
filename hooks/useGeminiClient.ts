@@ -1,21 +1,21 @@
 import { useState, useCallback, useEffect } from 'react';
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import {
+  EXTRACTION_MODELS,
+  GENERATION_MODELS,
+  DEFAULT_EXTRACTION_MODEL_ID,
+  DEFAULT_GENERATION_MODEL_ID,
+  StaticModelInfo,
+} from '../constants';
 
 const STORAGE_KEY = 'stylefusion-gemini-config';
 const CURRENT_VERSION = 2;
-const DEFAULT_TEXT_MODEL_ID = 'gemini-2.0-flash';
-const DEFAULT_IMAGE_MODEL_ID = 'imagen-3.0-generate-002';
 
 interface GeminiConfig {
   apiKey: string;
   textModelId: string;
   imageModelId: string;
   version: number;
-}
-
-export interface ModelInfo {
-  id: string;
-  label: string;
 }
 
 export interface UseGeminiClientReturn {
@@ -26,15 +26,12 @@ export interface UseGeminiClientReturn {
   isConnecting: boolean;
   connectionStatus: 'idle' | 'success' | 'error';
   connectionError: string | null;
-  textModels: ModelInfo[];
-  imageModels: ModelInfo[];
-  isLoadingModels: boolean;
-  modelsError: string | null;
+  textModels: StaticModelInfo[];
+  imageModels: StaticModelInfo[];
   setApiKey: (key: string) => void;
   setTextModelId: (modelId: string) => void;
   setImageModelId: (modelId: string) => void;
   testConnection: (keyOverride?: string) => Promise<boolean>;
-  fetchModels: () => Promise<boolean>;
   clearConfig: () => void;
   validateApiKey: (key: string) => { valid: boolean; error?: string };
 }
@@ -48,8 +45,8 @@ function loadConfig(): GeminiConfig {
       if (config.version === 1) {
         return {
           apiKey: config.apiKey || '',
-          textModelId: config.modelId || DEFAULT_TEXT_MODEL_ID,
-          imageModelId: DEFAULT_IMAGE_MODEL_ID,
+          textModelId: config.modelId || DEFAULT_EXTRACTION_MODEL_ID,
+          imageModelId: DEFAULT_GENERATION_MODEL_ID,
           version: CURRENT_VERSION
         };
       }
@@ -60,7 +57,7 @@ function loadConfig(): GeminiConfig {
   } catch {
     // Ignore parse errors
   }
-  return { apiKey: '', textModelId: DEFAULT_TEXT_MODEL_ID, imageModelId: DEFAULT_IMAGE_MODEL_ID, version: CURRENT_VERSION };
+  return { apiKey: '', textModelId: DEFAULT_EXTRACTION_MODEL_ID, imageModelId: DEFAULT_GENERATION_MODEL_ID, version: CURRENT_VERSION };
 }
 
 function saveConfig(config: GeminiConfig): void {
@@ -84,70 +81,30 @@ export function validateApiKey(key: string): { valid: boolean; error?: string } 
   return { valid: true };
 }
 
-interface FetchModelsResult {
-  textModels: ModelInfo[];
-  imageModels: ModelInfo[];
-}
-
-async function fetchAvailableModels(key: string): Promise<FetchModelsResult> {
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models?key=${key}`
-  );
-  if (!response.ok) {
-    throw new Error('Failed to fetch models');
-  }
-
-  const data = await response.json();
-
-  // Text models: Gemini models with generateContent capability
-  // Exclude non-text model variants
-  const excludePatterns = ['tts', 'image', 'robotics', 'computer-use', 'nano-banana', 'embedding', 'aqa'];
-
-  const textModels = data.models
-    .filter((m: { name: string; supportedGenerationMethods?: string[] }) =>
-      m.name.toLowerCase().includes('gemini') &&
-      m.supportedGenerationMethods?.includes('generateContent') &&
-      !excludePatterns.some(pattern => m.name.toLowerCase().includes(pattern))
-    )
-    .map((m: { name: string; displayName?: string }) => ({
-      id: m.name.replace('models/', ''),
-      label: m.displayName || m.name.replace('models/', '')
-    }))
-    .sort((a: ModelInfo, b: ModelInfo) => b.id.localeCompare(a.id));
-
-  // Image models: Imagen models with predict capability
-  const imageModels = data.models
-    .filter((m: { name: string; supportedGenerationMethods?: string[] }) =>
-      m.name.includes('imagen') &&
-      m.supportedGenerationMethods?.includes('predict')
-    )
-    .map((m: { name: string; displayName?: string }) => ({
-      id: m.name.replace('models/', ''),
-      label: m.displayName || m.name.replace('models/', '')
-    }))
-    .sort((a: ModelInfo, b: ModelInfo) => b.id.localeCompare(a.id));
-
-  return { textModels, imageModels };
-}
-
 export function useGeminiClient(): UseGeminiClientReturn {
   const [apiKey, setApiKeyState] = useState<string>('');
-  const [textModelId, setTextModelIdState] = useState<string>(DEFAULT_TEXT_MODEL_ID);
-  const [imageModelId, setImageModelIdState] = useState<string>(DEFAULT_IMAGE_MODEL_ID);
+  const [textModelId, setTextModelIdState] = useState<string>(DEFAULT_EXTRACTION_MODEL_ID);
+  const [imageModelId, setImageModelIdState] = useState<string>(DEFAULT_GENERATION_MODEL_ID);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [connectionError, setConnectionError] = useState<string | null>(null);
-  const [textModels, setTextModels] = useState<ModelInfo[]>([]);
-  const [imageModels, setImageModels] = useState<ModelInfo[]>([]);
-  const [isLoadingModels, setIsLoadingModels] = useState(false);
-  const [modelsError, setModelsError] = useState<string | null>(null);
 
-  // Load config on mount
+  // Static model lists - no fetching required
+  const textModels = EXTRACTION_MODELS;
+  const imageModels = GENERATION_MODELS;
+
+  // Load config on mount and validate model IDs against static list
   useEffect(() => {
     const config = loadConfig();
     setApiKeyState(config.apiKey);
-    setTextModelIdState(config.textModelId);
-    setImageModelIdState(config.imageModelId);
+
+    // Validate textModelId against static list, fallback to default if invalid
+    const validTextModel = EXTRACTION_MODELS.find(m => m.id === config.textModelId);
+    setTextModelIdState(validTextModel ? config.textModelId : DEFAULT_EXTRACTION_MODEL_ID);
+
+    // Validate imageModelId against static list, fallback to default if invalid
+    const validImageModel = GENERATION_MODELS.find(m => m.id === config.imageModelId);
+    setImageModelIdState(validImageModel ? config.imageModelId : DEFAULT_GENERATION_MODEL_ID);
   }, []);
 
   const isConfigured = apiKey.trim() !== '' && validateApiKey(apiKey).valid;
@@ -163,13 +120,13 @@ export function useGeminiClient(): UseGeminiClientReturn {
   const setTextModelId = useCallback((id: string) => {
     setTextModelIdState(id);
     const config = loadConfig();
-    saveConfig({ ...config, textModelId: id || DEFAULT_TEXT_MODEL_ID });
+    saveConfig({ ...config, textModelId: id || DEFAULT_EXTRACTION_MODEL_ID });
   }, []);
 
   const setImageModelId = useCallback((id: string) => {
     setImageModelIdState(id);
     const config = loadConfig();
-    saveConfig({ ...config, imageModelId: id || DEFAULT_IMAGE_MODEL_ID });
+    saveConfig({ ...config, imageModelId: id || DEFAULT_GENERATION_MODEL_ID });
   }, []);
 
   const testConnection = useCallback(async (keyOverride?: string): Promise<boolean> => {
@@ -223,47 +180,10 @@ export function useGeminiClient(): UseGeminiClientReturn {
     }
   }, [apiKey, textModelId]);
 
-  const fetchModels = useCallback(async (): Promise<boolean> => {
-    if (!apiKey.trim()) return false;
-
-    setIsLoadingModels(true);
-    setModelsError(null);
-
-    try {
-      const result = await fetchAvailableModels(apiKey);
-      setTextModels(result.textModels);
-      setImageModels(result.imageModels);
-
-      // Auto-select first text model if current not in list
-      if (result.textModels.length > 0 && !result.textModels.find(m => m.id === textModelId)) {
-        setTextModelIdState(result.textModels[0].id);
-        const config = loadConfig();
-        saveConfig({ ...config, textModelId: result.textModels[0].id });
-      }
-
-      // Auto-select first image model if current not in list
-      if (result.imageModels.length > 0 && !result.imageModels.find(m => m.id === imageModelId)) {
-        setImageModelIdState(result.imageModels[0].id);
-        const config = loadConfig();
-        saveConfig({ ...config, imageModelId: result.imageModels[0].id });
-      }
-
-      return true;
-    } catch (err) {
-      setModelsError(err instanceof Error ? err.message : 'Failed to fetch models');
-      // Fallback to defaults
-      setTextModels([{ id: DEFAULT_TEXT_MODEL_ID, label: 'Gemini 2.0 Flash (Default)' }]);
-      setImageModels([{ id: DEFAULT_IMAGE_MODEL_ID, label: 'Imagen 3.0 Generate (Default)' }]);
-      return false;
-    } finally {
-      setIsLoadingModels(false);
-    }
-  }, [apiKey, textModelId, imageModelId]);
-
   const clearConfig = useCallback(() => {
     setApiKeyState('');
-    setTextModelIdState(DEFAULT_TEXT_MODEL_ID);
-    setImageModelIdState(DEFAULT_IMAGE_MODEL_ID);
+    setTextModelIdState(DEFAULT_EXTRACTION_MODEL_ID);
+    setImageModelIdState(DEFAULT_GENERATION_MODEL_ID);
     setConnectionStatus('idle');
     setConnectionError(null);
     try {
@@ -283,13 +203,10 @@ export function useGeminiClient(): UseGeminiClientReturn {
     connectionError,
     textModels,
     imageModels,
-    isLoadingModels,
-    modelsError,
     setApiKey,
     setTextModelId,
     setImageModelId,
     testConnection,
-    fetchModels,
     clearConfig,
     validateApiKey,
   };

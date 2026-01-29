@@ -1,5 +1,4 @@
-import { ImageMetadata } from '../types';
-import { generateSDMJPrompt } from './promptGenerators';
+import { ImageMetadata, MJCompilerResult } from '../types';
 
 export function formatAsText(data: ImageMetadata): string {
   let text = '=== StyleFusion Metadata Export ===\n';
@@ -63,10 +62,9 @@ export function formatAsText(data: ImageMetadata): string {
  */
 export function formatAllAsText(
   description: string | null,
-  metadata: ImageMetadata
+  metadata: ImageMetadata,
+  mjCompilerResult: MJCompilerResult | null
 ): string {
-  const sdmjPrompt = generateSDMJPrompt(metadata);
-
   let text = '=== StyleFusion Complete Export ===\n';
   text += `Generated: ${new Date().toLocaleString()}\n`;
 
@@ -74,9 +72,12 @@ export function formatAllAsText(
   text += '\n━━━ GENERATIVE DESCRIPTION ━━━\n';
   text += description ? `${description}\n` : '(No description generated)\n';
 
-  // SD/MJ Prompt
-  text += '\n━━━ SD/MJ PROMPT ━━━\n';
-  text += `${sdmjPrompt}\n`;
+  // Midjourney Prompt (only if available)
+  if (mjCompilerResult) {
+    text += '\n━━━ MIDJOURNEY PROMPT ━━━\n\n';
+    text += `POSITIVE:\n${mjCompilerResult.positive}\n\n`;
+    text += `NEGATIVE:\n${mjCompilerResult.negative}\n`;
+  }
 
   // Structured Metadata
   text += '\n━━━ STRUCTURED METADATA ━━━\n';
@@ -90,14 +91,16 @@ export function formatAllAsText(
  */
 export function formatAllAsJson(
   description: string | null,
-  metadata: ImageMetadata
+  metadata: ImageMetadata,
+  mjCompilerResult: MJCompilerResult | null
 ): string {
-  const sdmjPrompt = generateSDMJPrompt(metadata);
-
   const exportData = {
     generated: new Date().toISOString(),
     description: description || null,
-    prompt: sdmjPrompt,
+    mjPrompt: mjCompilerResult ? {
+      positive: mjCompilerResult.positive,
+      negative: mjCompilerResult.negative
+    } : null,
     metadata: metadata
   };
 

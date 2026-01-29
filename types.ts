@@ -76,9 +76,16 @@ export const IMAGE_LABEL_OPTIONS: { type: ImageLabelType; label: string; descrip
   { type: 'lighting', label: 'Lighting Reference', description: 'Light setup' },
 ];
 
+// MJ Compiler output - compressed Midjourney-native prompt format
+export interface MJCompilerResult {
+  positive: string;  // 6-8 CSV values: "subject, in the style of X, modifier, ..."
+  negative: string;  // 3-5 terms max
+}
+
 export interface GeneratedData {
   jsonResult: ImageMetadata | null;
   descriptionResult: string | null;
+  mjCompilerResult: MJCompilerResult | null;
 }
 
 // Simplified Visual Synthesis Engine schema
