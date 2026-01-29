@@ -1,6 +1,21 @@
 import { ImageMetadata, IdentityColor, SubjectIdentity, FaceGeometry, HairSpecifics, DNAConfidence } from '../types';
 
 /**
+ * Default metadata with all empty values - used as fallback for missing sections
+ */
+export const DEFAULT_METADATA: ImageMetadata = {
+  meta: { intent: "", aspect_ratio: "", quality: "" },
+  subject: { archetype: "", description: "", expression: "", pose: "", attire: "" },
+  scene: { setting: "", atmosphere: "", elements: [] },
+  technical: { shot: "", lens: "", lighting: "", render: "" },
+  palette: { colors: [], mood: "" },
+  details: { textures: [], accents: [] },
+  style_fusion: { sources: "", blend_notes: "" },
+  negative: "",
+  text_content: { overlay: "", style: "" }
+};
+
+/**
  * Normalize a value to a string (empty string for null/None/undefined)
  */
 export function normalizeString(val: unknown): string {
@@ -153,39 +168,25 @@ export function normalizeIdentity(val: unknown): SubjectIdentity | undefined {
 }
 
 /**
- * Validate structure and return list of issues, or null if valid
+ * Normalize the raw parsed JSON into a valid ImageMetadata object.
+ * Accepts any input and always returns a complete schema shape.
+ * Missing sections/fields become empty strings or arrays.
  */
-export function getValidationIssues(raw: unknown): string[] | null {
-  const issues: string[] = [];
-
+export function normalizeMetadata(raw: unknown): ImageMetadata {
+  // Return defaults for non-object inputs
   if (!raw || typeof raw !== 'object') {
-    return ['Response is not an object'];
+    return { ...DEFAULT_METADATA };
   }
 
   const data = raw as Record<string, unknown>;
-
-  // Check required top-level sections exist
-  const requiredSections = ['meta', 'subject', 'scene', 'technical', 'palette', 'details', 'text_content'];
-  for (const section of requiredSections) {
-    if (!data[section] || typeof data[section] !== 'object') {
-      issues.push(`Missing or invalid section: ${section}`);
-    }
-  }
-
-  return issues.length > 0 ? issues : null;
-}
-
-/**
- * Normalize the raw parsed JSON into a valid ImageMetadata object
- */
-export function normalizeMetadata(raw: Record<string, unknown>): ImageMetadata {
-  const meta = (raw.meta as Record<string, unknown>) || {};
-  const subject = (raw.subject as Record<string, unknown>) || {};
-  const scene = (raw.scene as Record<string, unknown>) || {};
-  const technical = (raw.technical as Record<string, unknown>) || {};
-  const palette = (raw.palette as Record<string, unknown>) || {};
-  const details = (raw.details as Record<string, unknown>) || {};
-  const textContent = (raw.text_content as Record<string, unknown>) || {};
+  const meta = (data.meta as Record<string, unknown>) || {};
+  const subject = (data.subject as Record<string, unknown>) || {};
+  const scene = (data.scene as Record<string, unknown>) || {};
+  const technical = (data.technical as Record<string, unknown>) || {};
+  const palette = (data.palette as Record<string, unknown>) || {};
+  const details = (data.details as Record<string, unknown>) || {};
+  const styleFusion = (data.style_fusion as Record<string, unknown>) || {};
+  const textContent = (data.text_content as Record<string, unknown>) || {};
 
   return {
     meta: {
@@ -220,10 +221,42 @@ export function normalizeMetadata(raw: Record<string, unknown>): ImageMetadata {
       textures: normalizeArray(details.textures),
       accents: normalizeArray(details.accents),
     },
-    negative: normalizeString(raw.negative),
+    style_fusion: {
+      sources: normalizeString(styleFusion.sources),
+      blend_notes: normalizeString(styleFusion.blend_notes),
+    },
+    negative: normalizeString(data.negative),
     text_content: {
       overlay: normalizeString(textContent.overlay),
       style: normalizeString(textContent.style),
     },
   };
+}
+
+/**
+ * Calculate completeness score (0-100) based on how many fields have values.
+ * Useful for showing "Analysis: 73% complete" in UI.
+ */
+export function calculateCompleteness(metadata: ImageMetadata): number {
+  const fields = [
+    metadata.meta.intent, metadata.meta.aspect_ratio, metadata.meta.quality,
+    metadata.subject.archetype, metadata.subject.description, metadata.subject.expression,
+    metadata.subject.pose, metadata.subject.attire,
+    metadata.scene.setting, metadata.scene.atmosphere,
+    metadata.technical.shot, metadata.technical.lens, metadata.technical.lighting, metadata.technical.render,
+    metadata.palette.mood,
+    metadata.style_fusion.sources, metadata.style_fusion.blend_notes,
+    metadata.negative,
+    metadata.text_content.overlay, metadata.text_content.style
+  ];
+  const arrays = [
+    metadata.scene.elements, metadata.palette.colors,
+    metadata.details.textures, metadata.details.accents
+  ];
+
+  const stringCount = fields.filter(f => f && f.trim() !== '').length;
+  const arrayCount = arrays.filter(a => a && a.length > 0).length;
+  const total = fields.length + arrays.length;
+
+  return Math.round(((stringCount + arrayCount) / total) * 100);
 }

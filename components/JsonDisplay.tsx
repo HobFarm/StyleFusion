@@ -231,6 +231,14 @@ const JsonDisplay: React.FC<JsonDisplayProps> = ({ data }) => {
              )}
           </Section>
 
+          {/* Style Fusion Section - only show if data exists */}
+          {(data.style_fusion?.sources || data.style_fusion?.blend_notes) && (
+            <Section title="Style Fusion">
+              <KeyValue label="Sources" value={data.style_fusion.sources} />
+              <KeyValue label="Blend Notes" value={data.style_fusion.blend_notes} />
+            </Section>
+          )}
+
           {data.negative && (
               <div className="bg-red-950/20 border border-red-900/30 rounded-lg p-3">
                   <span className="text-xs text-red-400 uppercase tracking-wider block mb-1">Negative Prompt</span>

@@ -124,6 +124,10 @@ export interface ImageMetadata {
     textures: string[];
     accents: string[];
   };
+  style_fusion: {
+    sources: string;
+    blend_notes: string;
+  };
   negative: string;
   text_content: {
     overlay: string;

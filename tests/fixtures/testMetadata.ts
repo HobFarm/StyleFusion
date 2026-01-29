@@ -7,6 +7,7 @@ export const emptyMetadata: ImageMetadata = {
   technical: { shot: '', lens: '', lighting: '', render: '' },
   palette: { colors: [], mood: '' },
   details: { textures: [], accents: [] },
+  style_fusion: { sources: '', blend_notes: '' },
   negative: '',
   text_content: { overlay: '', style: '' },
 };
@@ -33,6 +34,7 @@ export const completeMetadata: ImageMetadata = {
   },
   palette: { colors: ['#8B4513', '#FFD700', '#4A4A4A'], mood: 'warm and dramatic' },
   details: { textures: ['weathered leather', 'rough stone'], accents: ['glowing runes', 'dust particles'] },
+  style_fusion: { sources: 'fantasy art, cinematic photography', blend_notes: 'blend the dramatic lighting with fantasy elements' },
   negative: 'blurry, low quality, cartoon, anime',
   text_content: { overlay: 'None', style: '' },
 };

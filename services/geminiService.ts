@@ -3,7 +3,7 @@ import heic2any from "heic2any";
 import { JSON_SYSTEM_PROMPT, DESC_SYSTEM_PROMPT, MJ_COMPILER_SYSTEM_PROMPT, API_TIMEOUT_MS, IMAGE_PROCESSING_TIMEOUT_MS, RETRY_CONFIG, MAX_FILE_SIZE } from "../constants";
 import { ImageMetadata, ImageLabel, IMAGE_LABEL_OPTIONS, ImageGenerationResult, MJCompilerResult } from "../types";
 import { logger } from "./loggingService";
-import { getValidationIssues, normalizeMetadata } from "../utils/metadataNormalizers";
+import { normalizeMetadata } from "../utils/metadataNormalizers";
 
 /**
  * Get API key from localStorage (used when not passed as parameter)
@@ -705,20 +705,9 @@ async function parseAndValidateJson(
       continue;
     }
 
-    const issues = getValidationIssues(parsed);
-    if (issues) {
-      if (attempt >= maxCorrections) {
-        logger.error("Validation failed after corrections", { issues });
-        throw new Error(`Failed to validate analysis: Missing sections: ${issues.join(', ')}. Please try again.`);
-      }
-      logger.warn(`Validation issues on attempt ${attempt + 1}, requesting correction`, { issues });
-      currentText = await correctMalformedJson(correctionModel, currentText, issues, signal);
-      continue;
-    }
-
-    // Valid structure - normalize and return
-    logger.info('JSON parsed and validated successfully', { attempts: attempt + 1 });
-    return normalizeMetadata(parsed as Record<string, unknown>);
+    // JSON parsed successfully - normalize and return (missing sections become empty values)
+    logger.info('JSON parsed successfully, normalizing', { attempts: attempt + 1 });
+    return normalizeMetadata(parsed);
   }
 
   throw new Error("Failed to get valid response after multiple correction attempts.");

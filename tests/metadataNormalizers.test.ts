@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeString, normalizeArray, getValidationIssues, normalizeMetadata } from '../utils/metadataNormalizers';
+import { normalizeString, normalizeArray, normalizeMetadata } from '../utils/metadataNormalizers';
 
 describe('normalizeString', () => {
   it('returns valid string unchanged', () => {
@@ -82,59 +82,6 @@ describe('normalizeArray', () => {
 
   it('returns empty array unchanged', () => {
     expect(normalizeArray([])).toEqual([]);
-  });
-});
-
-describe('getValidationIssues', () => {
-  const validInput = {
-    meta: { intent: '', aspect_ratio: '', quality: '' },
-    subject: { archetype: '' },
-    scene: { setting: '' },
-    technical: { shot: '' },
-    palette: { colors: [] },
-    details: { textures: [] },
-    text_content: { overlay: '' },
-  };
-
-  it('returns null for valid complete object', () => {
-    expect(getValidationIssues(validInput)).toBeNull();
-  });
-
-  it('returns error for null input', () => {
-    expect(getValidationIssues(null)).toEqual(['Response is not an object']);
-  });
-
-  it('returns error for undefined input', () => {
-    expect(getValidationIssues(undefined)).toEqual(['Response is not an object']);
-  });
-
-  it('returns error for string input', () => {
-    expect(getValidationIssues('string')).toEqual(['Response is not an object']);
-  });
-
-  it('returns error for missing meta section', () => {
-    const input = { ...validInput };
-    delete (input as Record<string, unknown>).meta;
-    const issues = getValidationIssues(input);
-    expect(issues).toContain('Missing or invalid section: meta');
-  });
-
-  it('returns errors for multiple missing sections', () => {
-    const issues = getValidationIssues({});
-    expect(issues).toHaveLength(7);
-    expect(issues).toContain('Missing or invalid section: meta');
-    expect(issues).toContain('Missing or invalid section: subject');
-    expect(issues).toContain('Missing or invalid section: scene');
-    expect(issues).toContain('Missing or invalid section: technical');
-    expect(issues).toContain('Missing or invalid section: palette');
-    expect(issues).toContain('Missing or invalid section: details');
-    expect(issues).toContain('Missing or invalid section: text_content');
-  });
-
-  it('returns error when section is not an object', () => {
-    const input = { ...validInput, meta: 'string' };
-    const issues = getValidationIssues(input);
-    expect(issues).toContain('Missing or invalid section: meta');
   });
 });
 
