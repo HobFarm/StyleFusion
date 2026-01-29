@@ -685,6 +685,15 @@ async function parseAndValidateJson(
     let parsed: unknown;
     try {
       parsed = JSON.parse(currentText);
+
+      // Handle multi-image responses (Gemini returns array of analyses)
+      if (Array.isArray(parsed)) {
+        if (parsed.length === 0) {
+          throw new Error("Empty analysis array returned");
+        }
+        logger.info('Multi-image response detected, using first analysis', { count: parsed.length });
+        parsed = parsed[0];
+      }
     } catch (e) {
       if (attempt >= maxCorrections) {
         logger.error("JSON Parse Error after corrections", { rawText: currentText.substring(0, 200) });
