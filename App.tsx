@@ -4,6 +4,7 @@ import JsonDisplay from './components/JsonDisplay';
 import PromptTabs from './components/PromptTabs';
 import GuidanceInput from './components/GuidanceInput';
 import ImageGenerator from './components/ImageGenerator';
+import FluxImageGenerator from './components/FluxImageGenerator';
 import DNAEditor from './components/DNAEditor';
 import CharacterLibrary from './components/CharacterLibrary';
 import ComparisonView from './components/ComparisonView';
@@ -519,6 +520,16 @@ const App: React.FC = () => {
                   onImageGenerated={handleImageGenerated}
                   apiKey={apiKey}
                   imageModel={imageModelId}
+                />
+              )}
+
+              {/* FLUX.2 Image Generation (Cloudflare Workers AI) */}
+              {results.jsonResult && results.descriptionResult && (
+                <FluxImageGenerator
+                  mjPrompt={results.mjCompilerResult?.positive || ''}
+                  universalPrompt={results.descriptionResult}
+                  referenceFiles={files}
+                  disabled={status.isProcessing}
                 />
               )}
             </div>

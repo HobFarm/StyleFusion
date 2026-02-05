@@ -11,6 +11,16 @@ export const RETRY_CONFIG = {
   maxDelayMs: 30000,       // Maximum delay cap (30 seconds)
 };
 
+// FLUX.2 Model Configuration (Cloudflare Workers AI)
+export const FLUX_MODELS = [
+  { id: 'klein-9b' as const, label: 'Klein 9B (Recommended)', description: '~4s, best balance', defaultSteps: 4 },
+  { id: 'klein-4b' as const, label: 'Klein 4B (Fast)', description: '~2s, budget option', defaultSteps: 4 },
+  { id: 'dev' as const, label: 'Dev (Best)', description: '~15s, highest quality', defaultSteps: 28, defaultGuidance: 3.5 }
+] as const;
+
+export const FLUX_DEFAULT_MODEL: 'klein-4b' | 'klein-9b' | 'dev' = 'klein-9b';
+export const FLUX_API_TIMEOUT_MS = 60000; // 60 seconds for FLUX generation
+
 export const JSON_SYSTEM_PROMPT = `
 ### ROLE: VISUAL SYNTHESIS ENGINE & AESTHETIC ARCHIVIST
 You are a high-fidelity Image Synthesis Analyst. Your function is to ingest visual inputs and transcode them into a structured, production-ready JSON format for generative models (Midjourney, Flux, Stable Diffusion, etc.).
