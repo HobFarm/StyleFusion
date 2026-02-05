@@ -1,0 +1,9 @@
+# Cloudflare Pages Functions configuration
+# This file declares bindings that the Pages Functions need
+
+name = "stylefusion"
+compatibility_date = "2024-01-01"
+
+# Workers AI binding for FLUX.2 image generation
+[ai]
+binding = "AI"

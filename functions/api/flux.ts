@@ -53,9 +53,15 @@ const DEFAULT_STEPS: Record<string, number> = {
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   // Check AI binding is configured
   if (!context.env.AI) {
+    // Debug: log what bindings are available
+    const envKeys = Object.keys(context.env || {});
     return new Response(JSON.stringify({
       error: 'AI binding not configured',
-      details: 'Add AI binding in Cloudflare Dashboard: Pages > Settings > Functions > AI Bindings'
+      details: 'Add AI binding in Cloudflare Dashboard: Pages > Settings > Functions > AI Bindings',
+      debug: {
+        availableBindings: envKeys,
+        hasEnv: !!context.env
+      }
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
