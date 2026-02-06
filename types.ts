@@ -153,28 +153,6 @@ export interface ImageGenerationResult {
   mimeType: string;
 }
 
-// FLUX.2 model types
-export type FluxModel = 'klein-4b' | 'klein-9b' | 'dev';
-
-// FLUX generation options
-export interface FluxGenerationOptions {
-  prompt: string;
-  model: FluxModel;
-  width?: number;
-  height?: number;
-  steps?: number;
-  guidance?: number;
-  seed?: number;
-  referenceImages?: File[];
-  includeReferences?: boolean;
-}
-
-// FLUX generation result
-export interface FluxGenerationResult {
-  imageBlob: Blob;
-  mimeType: string;
-}
-
 // Section toggles for SD/MJ format (follows canonical slot structure)
 export interface SDMJIncludeSections {
   subject: boolean;       // Slot 1: factual subject description
