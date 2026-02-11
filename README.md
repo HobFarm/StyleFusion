@@ -1,290 +1,118 @@
-<div align="center">
-<a href="https://hob.farm"><img alt="Hob Farm Logo" src="assets/hobfarm-readme-logo.jpg" style="border-radius: 8px;" /></a>
-
 # StyleFusion
 
-**AI-Powered Visual Style Synthesis for Image Generation**
+AI-powered image analysis and structured prompt compiler. Upload reference images, extract detailed metadata schemas, and generate provider-specific prompts for consistent results across Midjourney, DALL-E, Gemini, Grok, and more.
 
-Transform visual references into production-ready prompts and structured metadata for AI image generators
+**Live at [stylefusion.hob.farm](https://stylefusion.hob.farm)**
 
-</div>
+## What It Does
 
----
+Most AI image generation relies on freeform prompting: you describe what you want in natural language and hope the model interprets it correctly. Results are inconsistent across providers, unreproducible, and drift over time. StyleFusion solves this with structured metadata extraction.
 
-## Overview
+Upload a reference image. StyleFusion analyzes it and produces a JSON schema capturing every visual attribute: composition, lighting, color palette, texture, mood, subject positioning, and negative constraints. That schema becomes the contract. Feed it to any supported provider and get consistent, reproducible output.
 
-StyleFusion is a multimodal visual analysis tool that intelligently blends multiple images to generate structured JSON metadata and natural language descriptions optimized for AI image generators like Midjourney, Stable Diffusion, and Flux.
+The key insight: negative constraints matter as much as positive descriptions. StyleFusion doesn't just describe what's in an image. It locks down what should NOT appear, preventing the drift that kills consistency across generations.
 
-Instead of treating multiple reference images as separate inputs, StyleFusion performs **style fusion**—synthesizing visual elements from up to 3 images into a single cohesive scene description. Upload a lighting reference, a color palette, and a composition guide, and StyleFusion will intelligently merge them into unified, actionable prompts.
-
----
-
-## Features
-
-| Feature | Description |
-|---------|-------------|
-| **Multi-Image Style Fusion** | Blend up to 3 images into a single cohesive synthesis—not a collage, but a unified scene |
-| **Structured JSON Metadata** | 9-section schema capturing subject, scene, technical specs, palette, textures, and more |
-| **Natural Language Descriptions** | AI-generated 4-6 sentence descriptions ready for image generators |
-| **Dual Export Formats** | Universal format for any generator + Midjourney/SD optimized format |
-| **Image Generation** | Generate new images directly from analyzed metadata using Gemini |
-| **Broad Format Support** | JPEG, PNG, WebP, HEIC, HEIF with automatic conversion |
-| **Robust Error Handling** | Exponential backoff retry, 3-minute timeout, user cancellation support |
-| **Client-Side Logging** | Downloadable debug logs for troubleshooting |
-
----
-
-## How It Works
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  1. UPLOAD          2. LABEL           3. ANALYZE         4. EXPORT        │
-│  ─────────          ─────────          ──────────         ────────         │
-│  Up to 3 images  →  Assign roles   →   AI synthesis  →   Copy prompts     │
-│  (drag & drop)      (optional)         via Gemini        or generate       │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-1. **Upload** 1-3 reference images (JPEG, PNG, WebP, HEIC, or HEIF)
-2. **Label** each image's role (style, color, composition, lighting, etc.) — optional but improves results
-3. **Add guidance** with custom instructions like "emphasize dramatic lighting" — optional
-4. **Generate analysis** to receive structured JSON metadata + natural language description
-5. **Export** as Universal or SD/MJ format, or generate a new image from the metadata
-
----
-
-## Quick Start
-
-**Prerequisites:** Node.js
-
-```bash
-# 1. Install dependencies
-npm install
-
-# 2. Create environment file with your Gemini API key
-echo VITE_GEMINI_API_KEY=your_api_key_here > .env.local
-
-# 3. Start development server
-npm run dev
-
-# 4. Open in browser
-# http://localhost:9005
-```
-
-> **Security Note:** This app runs entirely in the browser. Your API key will be visible in client-side code. For production deployment, implement a backend proxy to protect your credentials.
-
----
-
-## Image Labels
-
-When uploading images, you can optionally assign a role to guide the AI's analysis:
-
-| Label | Purpose |
-|-------|---------|
-| **General Reference** | All-purpose reference (default) |
-| **Style Reference** | Visual rendering style, artistic technique |
-| **Composition Reference** | Layout, framing, spatial arrangement |
-| **Color Reference** | Palette, color relationships, mood |
-| **Subject Reference** | Subject details, character design, objects |
-| **Texture Reference** | Materials, surfaces, tactile qualities |
-| **Lighting Reference** | Light setup, shadows, atmosphere |
-
-Labeling helps StyleFusion prioritize specific visual aspects from each image during synthesis.
-
----
-
-## Output Schema
-
-StyleFusion generates a comprehensive 9-section metadata schema:
-
-```typescript
-interface ImageMetadata {
-  meta: {
-    intent: string;           // Creative direction
-    aspect_ratio: string;     // e.g., "16:9", "1:1"
-    quality: string;          // e.g., "8k photorealistic"
-  };
-  subject: {
-    archetype: string;        // e.g., "mysterious wanderer"
-    description: string;      // Physical description
-    expression: string;       // Emotional state
-    pose: string;             // Body positioning
-    attire: string;           // Clothing/accessories
-  };
-  scene: {
-    setting: string;          // Location/environment
-    atmosphere: string;       // Mood/ambiance
-    elements: string[];       // Key environmental details
-  };
-  technical: {
-    shot: string;             // e.g., "medium close-up"
-    lens: string;             // e.g., "85mm f/1.4"
-    lighting: string;         // Light description
-    render: string;           // e.g., "photorealistic", "oil painting"
-  };
-  palette: {
-    colors: string[];         // Hex codes with modifiers
-    mood: string;             // Color mood description
-  };
-  details: {
-    textures: string[];       // Surface qualities
-    accents: string[];        // Decorative elements
-  };
-  style_fusion: {
-    sources: string;          // Which image contributed what
-    blend_notes: string;      // How styles were merged
-  };
-  negative: string;           // Auto-generated negative prompt
-  text_content: {
-    overlay: string;          // Any text in the image
-    style: string;            // Typography style
-  };
+```json
+{
+  "style": "atomic-noir",
+  "lighting": {
+    "primary": "chiaroscuro-industrial",
+    "negative": "flat-even-soft"
+  },
+  "palette": {
+    "dominant": "#1a1a1a",
+    "accent": "#8b5cf6"
+  },
+  "composition": {
+    "type": "authority-geometry",
+    "negative": "centered-symmetrical-pastoral"
+  },
+  "locked": true
 }
 ```
 
----
+## Architecture
 
-## Export Formats
-
-### Universal Format
-
-Comma-separated format compatible with any AI image generator:
+StyleFusion follows the Fusion Engine pipeline pattern:
 
 ```
-cinematic portrait, 8k photorealistic, mysterious wanderer, weathered face
-with deep eyes, ancient ruins at sunset, dramatic rim lighting, warm amber
-and cool shadow, rough stone textures, volumetric fog
---neg blurry, low quality, cartoon, anime, watermark
+INPUT --> COMPILE --> ROUTE --> EXECUTE --> REVIEW --> OUTPUT
 ```
 
-- Includes all metadata sections
-- Customizable section toggles in export modal
-- Works with Midjourney, Stable Diffusion, Flux, DALL-E, and others
+1. **INPUT**: Reference image(s) uploaded by the user
+2. **COMPILE**: Context assembly with analysis parameters and provider targets
+3. **ROUTE**: Task dispatched to the appropriate AI provider based on capability (Gemini for structured extraction, Claude for nuanced analysis)
+4. **EXECUTE**: Image analysis produces structured metadata against a defined JSON schema
+5. **REVIEW**: Human reviews and adjusts extracted attributes before prompt generation
+6. **OUTPUT**: Provider-specific prompts generated from the validated schema
 
-### SD/MJ Format
-
-Optimized for Midjourney and Stable Diffusion using position-weighted grammar:
-
-```
-mysterious wanderer in ancient ruins at sunset, in the style of
-photorealistic, dark amber and gold, weathered textures, dramatic
-rim lighting, cinematic --ar 16:9 --no blurry, cartoon, watermark
-```
-
-**Structure:** `[SUBJECT], in the style of [STYLE], [COLORS], [SECONDARY], [TECHNICAL]`
-
-- Position determines influence (leftmost = strongest)
-- Optimal length: 5-8 elements
-- Includes `--ar` (aspect ratio) and `--no` (negative) parameters
-- Based on empirical analysis of Midjourney's describe feature
-
----
+Server-side prompt construction is the core differentiator. The user never writes a prompt. They make visual decisions (accept, reject, adjust extracted attributes) and the system compiles optimized prompts per provider, accounting for each provider's syntax, strengths, and known drift patterns.
 
 ## Tech Stack
 
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| React | 19.2 | UI framework |
-| TypeScript | 5.8 | Type safety |
-| Vite | 6.2 | Build tool & dev server |
-| Tailwind CSS | 4.1 | Styling |
-| Google Gemini AI | 0.21 | Image analysis & generation |
-| Vitest | 4.0 | Testing framework |
+| Layer | Technology |
+|-------|-----------|
+| Frontend | TypeScript, deployed on Cloudflare Pages |
+| API | Cloudflare Workers |
+| Database | Cloudflare D1 (credits, user state) |
+| Storage | Cloudflare R2 (image assets, CDN) |
+| AI Routing | Cloudflare AI Gateway (logging, caching, fallbacks) |
+| AI Providers | Gemini (primary extraction), Claude (complex analysis), Grok (style/voice) |
 
----
+Everything runs on the Cloudflare edge. No origin servers, no cold starts for cached routes, global distribution by default.
 
-## Project Structure
+## Schema-First Methodology
 
-```
-StyleFusion/
-├── App.tsx                     # Main application component
-├── index.tsx                   # React entry point
-├── types.ts                    # TypeScript type definitions
-├── constants.ts                # Configuration & system prompts
-│
-├── components/
-│   ├── FileUpload.tsx          # Drag-drop image upload with validation
-│   ├── GuidanceInput.tsx       # User guidance/instructions input
-│   ├── JsonDisplay.tsx         # Structured metadata viewer
-│   ├── DescriptionDisplay.tsx  # Natural language output display
-│   ├── ImageGenerator.tsx      # Generate images from metadata
-│   └── PromptExport.tsx        # Export modal with format options
-│
-├── services/
-│   ├── geminiService.ts        # Gemini API integration (analysis & generation)
-│   └── loggingService.ts       # Client-side logging with download
-│
-├── utils/
-│   ├── promptGenerators.ts     # Universal & SD/MJ prompt generation
-│   ├── colorUtils.ts           # Color formatting utilities
-│   ├── metadataNormalizers.ts  # JSON validation & normalization
-│   └── textFormatters.ts       # Text formatting utilities
-│
-└── tests/                      # Vitest test suites
-```
+Every AI interaction in StyleFusion is governed by a JSON contract defined before execution begins. The model receives a schema specifying exactly what output shape is expected. This prevents hallucination, ensures parseable results, and makes the entire pipeline composable and testable.
 
----
+This principle extends across all HobFarm products: define the data shape first, then build to the contract. Types drive implementation, not the other way around.
 
-## Configuration
+## Provider Abstraction
 
-Key settings defined in `constants.ts`:
+StyleFusion treats AI providers as interchangeable backends behind a unified interface. Adding a new provider means implementing a single adapter: how to format the prompt for that provider's syntax and how to parse its response back into the shared schema.
 
-| Setting | Value | Description |
-|---------|-------|-------------|
-| `MAX_FILES` | 3 | Maximum images per analysis |
-| `MAX_FILE_SIZE` | 50 MB | Maximum size per file |
-| `ACCEPTED_TYPES` | JPEG, PNG, WebP, HEIC, HEIF | Supported image formats |
-| `API_TIMEOUT_MS` | 180,000 (3 min) | Gemini API timeout |
-| `RETRY_CONFIG.maxRetries` | 3 | Retry attempts for transient errors |
-| `RETRY_CONFIG.baseDelayMs` | 3,000 | Base delay for exponential backoff |
-| `RETRY_CONFIG.maxDelayMs` | 30,000 | Maximum retry delay |
+Current providers each have characteristic drift patterns that the system actively mitigates through provider-aware prompt sanitization. The same schema produces subtly different prompts per provider, compensating for known biases.
 
----
+## Cross-Provider Consistency
 
-## Scripts
+The gallery at [hob.farm/gallery](https://hob.farm/gallery/) demonstrates the same schema fed to multiple providers side by side. Same structured input, consistent visual output across Gemini, ChatGPT, Midjourney, and Grok. This is what schema-first methodology looks like in practice.
+
+## Development
 
 ```bash
-npm run dev        # Start development server (http://localhost:9005)
-npm run build      # Create production build
-npm run preview    # Preview production build locally
-npm run test       # Run tests in watch mode
-npm run test:run   # Run tests once
+# Clone
+git clone https://github.com/HobFarm/StyleFusion.git
+cd StyleFusion
+
+# Install dependencies
+npm install
+
+# Configure environment
+# Add API keys via Cloudflare dashboard Settings > Variables
+
+# Local development
+npx wrangler pages dev
+
+# Deploy
+npx wrangler pages deploy
 ```
 
----
+## Status
 
-## Keyboard Shortcuts
+StyleFusion is live in beta with tiered pricing planned:
 
-| Key | Action |
-|-----|--------|
-| `Escape` | Cancel analysis / Close modal / Clear results |
-| `Enter` | Submit (when focused on input) |
+| Tier | Credits | Price |
+|------|---------|-------|
+| Creator | 50 fusions/mo | $12/mo |
+| Studio | 150 fusions/mo | $29/mo |
+| Agency | 500 fusions/mo | $79/mo |
 
----
+Credit packs available for overflow usage.
 
-## Troubleshooting
+## Part of HobFarm
 
-**"API key not configured"**
-- Ensure `.env.local` contains `VITE_GEMINI_API_KEY=your_key`
-- Restart the dev server after adding the key
+StyleFusion is one component of the [HobFarm](https://hob.farm) ecosystem: AI tools built on the principle of invisible labor, visible results. Same architecture, same methodology, applied across image analysis, content generation, and autonomous agents.
 
-**"Request timed out"**
-- Large images or complex analyses may take up to 3 minutes
-- Try with smaller/fewer images
-- Check your network connection
+## License
 
-**"HEIC conversion failed"**
-- HEIC/HEIF files are converted client-side; ensure sufficient memory
-- Try converting to JPEG before upload as a workaround
-
-**Download logs for debugging**
-- Click the log icon in the UI to download session logs
-- Logs include API calls, errors, and processing steps
-
----
-
-<div align="center">
-
-<a href="https://hob.farm"><img alt="Hob Farm" src="assets/hobfarm-readme-small-logo.jpg" style="border-radius: 8px;" /></a>
-
-</div>
+MIT
