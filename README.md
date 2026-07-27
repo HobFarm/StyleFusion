@@ -5,112 +5,94 @@
 <h1 align="center">StyleFusion</h1>
 
 <p align="center">
-  <strong>AI image generation through structured visual intelligence.</strong><br/>
-  Extract. Compile. Generate. Compare.
+  <strong>Structured reference analysis and prompt compilation for visual generation.</strong><br/>
+  Extract. Blend. Compile. Record.
 </p>
 
 <p align="center">
-  <a href="https://sf.hob.farm">Launch App</a> ·
-  <a href="https://hob.farm">HobFarm</a> ·
-  <a href="docs/architecture.md">Architecture</a> ·
-  <a href="docs/providers.md">Providers</a> ·
-  <a href="docs/creative-slots.md">Creative Slots</a>
+  <a href="https://hob.farm/workshop/stylefusion/">Project page</a> ·
+  <a href="https://hob.farm">HobFarm</a>
 </p>
 
 ---
 
-## What is StyleFusion?
+## Current status
 
-StyleFusion is an AI image generation platform that treats prompt engineering as a compilation problem, not a writing exercise.
+StyleFusion is an active private-development project. This public repository is a controlled project brief and documentation surface. It does not contain the current application source, private schemas, provider credentials, paid assets, internal test corpus, or production configuration.
 
-Instead of crafting prompts by hand, StyleFusion extracts structured metadata from reference images, compiles that metadata through a slot-based architecture, enriches it with a 157,000+ term visual vocabulary, and routes the result to multiple generation providers simultaneously.
+The older public description presented StyleFusion as a launched subscription platform with fixed pricing and broad provider coverage. That no longer describes the current project.
 
-The output: the same creative intent rendered across different AI models, side by side, so you can compare and choose.
+## What StyleFusion does
 
-## How It Works
+StyleFusion turns one or more reference images into a traceable visual-generation record.
 
-**1. Reference Upload**
-Drop in one or more reference images. These aren't used for img2img or style transfer. They're analyzed for visual structure: subject, scene, camera, lighting, color, composition, and rendering characteristics.
+The current workflow is:
 
-**2. Extraction**
-Gemini models parse each reference into an Intermediate Representation (IR), a structured JSON object describing what's in the image across dozens of visual dimensions. The system detects whether the reference is photographic, CGI, illustration, or painterly, and adapts its extraction strategy accordingly.
+1. Add reference images.
+2. Assign each reference a role and weight.
+3. Analyze visual structure into a typed Intermediate Representation.
+4. Blend compatible evidence while preserving source attribution.
+5. Compile a master prompt and provider-specific variants.
+6. Export reusable Markdown and JSON records.
+7. Optionally send the compiled request to a selected image provider.
 
-**3. Creative Slots Compilation**
-The IR feeds into the Creative Slots compiler, which organizes visual metadata into categorical slots (subject, environment, lighting, camera, style, rendering). Each slot has rules for how its contents combine, overlap, and resolve conflicts when multiple references contribute to the same dimension.
+The system is built to compare extraction and generation behavior across providers without letting model-specific prompt conventions become the source of truth.
 
-**4. Grimoire Enrichment**
-The [Hob Grimoire](https://github.com/HobFarm/grimoire), a visual vocabulary database with 157,000+ classified atoms, enriches the compiled slots. Each atom carries harmonic scores across five dimensions (hardness, temperature, weight, formality, era affinity), and the Conductor selects atoms that resonate with the target arrangement profile. Atomic Noir, Cyberpunk, Film Noir, Art Deco, and 13+ other arrangement profiles each produce distinct tonal signatures.
+## Design goals
 
-**5. Multi-Provider Generation**
-The enriched prompt compiles into provider-specific formats and routes to multiple AI image generators simultaneously. Same creative intent, different model interpretations.
+- **Schema-first output:** visual facts and generation instructions live in typed records rather than loose prompt text.
+- **Evidence-aware blending:** extracted features remain connected to the references that supplied them.
+- **Provider separation:** analysis, compilation, and generation are distinct stages with replaceable provider adapters.
+- **Reproducible exports:** each run can record model, endpoint, profile, intent, dimensions, prompt hash, timing, warnings, filenames, and notes.
+- **Human review:** generated output is inspected and corrected rather than silently promoted into reusable project knowledge.
+- **Private-by-default project data:** user images, private style packs, credentials, internal corpora, and production records stay out of the public repository.
 
-**6. Director's Note**
-At any point, freeform overrides can steer the output without rebuilding the entire IR. Change the mood, swap a color palette, push toward abstraction, all without losing the structural foundation.
+## Current output targets
 
-## Supported Providers
+StyleFusion currently focuses on still-image workflows:
 
-### Image Generation
-| Provider | Model |
-|----------|-------|
-| Google Gemini | Nano Banana 2 (3.1 Flash Image), Nano Banana Pro (3 Pro Image) |
-| OpenAI | GPT Image |
-| xAI | Grok Imagine |
-| fal.ai | Flux 2 Flex, Flux Kontext Pro, Seedream 4.5 |
-| ComfyUI | Custom workflows (local or cloud GPU) |
+- structured reference analysis
+- weighted multi-reference blending
+- master and provider-specific prompt compilation
+- reusable StyleFusion Markdown exports
+- machine-readable JSON exports
+- portrait, fashion, scene, and character-sheet derivatives
+- motion-safe image guidance for later image-to-video use
 
-### Video Generation (In Development)
-| Provider | Model |
-|----------|-------|
-| Google | Veo 3.1 |
-| Kuaishou | Kling 3.0 Pro |
-| OpenAI | Sora 2 Pro |
+Video generation is a future integration layer, not a current product claim.
 
-### Extraction
-| Provider | Model | Use |
-|----------|-------|-----|
-| Google Gemini | 3 Flash | Default extraction (fast, cost-effective) |
-| Google Gemini | 3 Pro | Complex scenes with dense visual information |
+## Relationship to Grimoire
 
-## Architecture
+StyleFusion can consume reviewed vocabulary, schemas, and project knowledge from Grimoire. Enrichment is evidence-triggered and must remain traceable. Grimoire is not used as a random adjective injector, and private Grimoire data is not published through this repository.
 
-StyleFusion is built on the [Fractal Fusion Engine](docs/architecture.md), a six-phase pipeline that treats every AI task as a structured data mediation problem:
+## Repository boundary
 
-```
-INGEST → INDEX → MEDIATE → EXECUTE → VALIDATE → DELIVER
-```
+This repository may contain:
 
-The same pattern scales from a single image generation to a batch comparison across providers. Simple tasks run linearly. Complex tasks recurse, with phases spawning sub-phases that follow identical contracts.
+- public project documentation
+- selected architecture notes
+- sanitized examples
+- screenshots or diagrams approved for publication
+- contribution guidance for documentation or public tooling
 
-For more detail, see the [Architecture Overview](docs/architecture.md).
+It must not contain:
 
-## The Grimoire Connection
+- current proprietary application source
+- API keys, tokens, account identifiers, or local environment files
+- private Grimoire packs or source corpora
+- unreleased client or project images
+- paid downloads or full-resolution private assets
+- raw production logs
+- provider billing data
 
-StyleFusion and the Hob Grimoire form a self-enriching loop. During extraction, StyleFusion encounters visual terms. Novel terms get submitted to the Grimoire, classified by AI, scored across harmonic dimensions, and stored. The next time StyleFusion compiles a prompt, those terms are available for enrichment.
+## Collaboration
 
-The vocabulary grows with every generation. Every user's creative work makes the system smarter for the next user.
+Technical discussion and serious collaboration inquiries are welcome, especially around structured visual IRs, evidence-aware blending, provider adapters, generation provenance, and durable creative tooling.
 
-## Pricing
-
-| Plan | Fusions/month | Price |
-|------|---------------|-------|
-| Creator | 50 | $12/mo |
-| Studio | 150 | $29/mo |
-| Agency | 500 | $79/mo |
-
-Credit packs available from $5 to $40 for additional generations.
-
-## Built With
-
-StyleFusion runs entirely on Cloudflare's edge infrastructure: Workers for compute, D1 for the database, R2 for storage, Pages for the frontend, AI Gateway for provider routing and observability, and Access for authentication. No origin servers. No cold starts that matter.
-
-## About HobFarm
-
-HobFarm builds AI-powered creative tools inspired by the "hobs" of English folklore: helpful household spirits that handle invisible labor so you can focus on visible results.
-
-StyleFusion is one piece of a larger system. The Grimoire provides the vocabulary. HobBot automates content. The Fractal Fusion Engine connects them all.
-
-Learn more at [hob.farm](https://hob.farm).
+Use the [HobFarm contact page](https://hob.farm/contact/) for direct inquiries.
 
 ## License
 
-This repository contains documentation and promotional materials only. The StyleFusion application source code is proprietary. See [LICENSE](LICENSE) for details.
+Copyright © 2025–2026 HobFarm. All rights reserved.
+
+This repository contains documentation and promotional material only. No license is granted to copy, modify, distribute, or commercially reuse the StyleFusion application, schemas, documentation, visual identity, or related project materials unless a separate license explicitly says otherwise. See [LICENSE](LICENSE).
