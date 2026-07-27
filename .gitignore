@@ -1,5 +1,42 @@
+# Operating systems
 .DS_Store
 Thumbs.db
+
+# Editors
 *.swp
 *.swo
 *~
+.vscode/
+.idea/
+
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+.dev.vars
+*.pem
+*.key
+
+# Dependencies and build output
+node_modules/
+dist/
+dist-deploy/
+.wrangler/
+.vite/
+coverage/
+
+# Logs and temporary output
+*.log
+logs/
+tmp/
+temp/
+
+# Private project material
+private/
+internal/
+corpus/
+fixtures/private/
+outputs/
+generations/
+references/
+*.zip
